@@ -3,6 +3,6 @@ Face recognition for Artificial Intelligence project using Python, Dlib and Open
 
 Usage: 
 Activate virtual env:
-# . activate.sh
+``` . activate.sh ```
 Run python code:
-# python code/find_faces.py
+``` python code/find_faces.py ```
