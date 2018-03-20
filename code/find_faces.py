@@ -1,11 +1,11 @@
 import dlib
+face_detector = dlib.get_frontal_face_detector()
 from skimage import io
 
 
 file_name = '../static/maciek.jpg'
 
 # Create a HOG face detector using the built-in dlib class
-face_detector = dlib.get_frontal_face_detector()
 
 win = dlib.image_window()
 
