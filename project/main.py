@@ -6,7 +6,7 @@ import cv2
 import face_recognition
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.svm import LinearSVC
+from sklearn.svm import SVC
 from tqdm import tqdm
 
 
@@ -40,7 +40,7 @@ def load_encodings_from_pickle():
 def create_classifier(X, y):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     # LinearSVC_classifier = SklearnClassifier(SVC(kernel='linear',probability=True))
-    clf = LinearSVC(random_state=42)
+    clf = SVC(kernel='linear', probability=True, random_state=42)
     clf.fit(X_train, y_train)
     score = clf.score(X_test, y_test)
     print("Finished training, score {}".format(score))
@@ -51,12 +51,20 @@ def create_classifier(X, y):
 def load_classifier():
     with open("classifier.h5", "rb") as f:
         clf = pickle.load(f)
-    loaded_image = face_recognition.load_image_file("data/test-maciek.png")
+    loaded_image = face_recognition.load_image_file("data/testing-adam.png")
     encodings = face_recognition.face_encodings(loaded_image)
     prediction = None
     if encodings:
-        prediction = clf.predict(encodings[0].reshape(1, -1))
+        prediction = clf.predict_proba(encodings[0].reshape(1, -1))
     print(prediction)
+
+
+def equalize_histogram(image):
+    img_y_cr_cb = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
+    y, cr, cb = cv2.split(img_y_cr_cb)
+    y_eq = cv2.equalizeHist(y)
+    img_y_cr_cb_eq = cv2.merge((y_eq, cr, cb))
+    return cv2.cvtColor(img_y_cr_cb_eq, cv2.COLOR_YCR_CB2BGR)
 
 
 def video_stream_detection():
