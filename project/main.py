@@ -86,49 +86,61 @@ def equalize_histogram(image):
     return cv2.cvtColor(img_y_cr_cb_eq, cv2.COLOR_YCR_CB2BGR)
 
 
+def process_the_frame(rgb_small_frame, clf):
+    img_rgb_eq = equalize_histogram(rgb_small_frame)
+    face_locations = face_recognition.face_locations(img_rgb_eq)
+    face_encodings = face_recognition.face_encodings(img_rgb_eq, face_locations)
+    face_names = []
+    for face_encoding in face_encodings:
+        face_encoding_reshaped = face_encoding.reshape(1, -1)
+        probability = clf.predict_proba(face_encoding_reshaped)[0]
+        if any(p > 0.85 for p in probability):
+            prob_string = ""
+            for p in probability:
+                if p > 0.85:
+                    p *= 100
+                    prob_string = str(p)[:4]
+            prediction = clf.predict(face_encoding_reshaped)[0]
+            person_text = "{} {}%".format(prediction, prob_string)
+        else:
+            person_text = "Unknown"
+        face_names.append(person_text)
+    return face_locations, face_names
+
+
+def display_face_box(frame, top, right, bottom, left, name):
+    # Putting text on OpenCV window.
+    top *= 2
+    right *= 2
+    bottom *= 2
+    left *= 2
+    cv2.rectangle(frame, (left, top), (right, bottom), (152, 0, 152), 3)
+    font = cv2.FONT_HERSHEY_DUPLEX
+    cv2.putText(img=frame, text=name, org=(left + 6, bottom - 6), fontFace=font, 
+                color=(255, 255, 255), bottomLeftOrigin=False, fontScale=0.5)
+    return frame
+
+
 def video_stream_detection():
     with open("classifier.h5", "rb") as f:
         clf = pickle.load(f)
     video_capture = cv2.VideoCapture(0)
     video_capture.set(3, 400)
     video_capture.set(4, 600)
-    face_locations = []
-    face_encodings = []
-    face_names = []
+    face_locations, face_encodings, face_names = [], [], []
     process_this_frame = True
     while True:
         ret, frame = video_capture.read()
+        # Divide frame size by two, to speed up processing
+        # (smaller picture means faster detection and prediction!)
         small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
         rgb_small_frame = small_frame[:, :, ::-1]
         if process_this_frame:
-            img_rgb_eq = equalize_histogram(rgb_small_frame)
-            face_locations = face_recognition.face_locations(img_rgb_eq)
-            face_encodings = face_recognition.face_encodings(img_rgb_eq, face_locations)
-            face_names = []
-            for face_encoding in face_encodings:
-                face_encoding_reshaped = face_encoding.reshape(1, -1)
-                probability = clf.predict_proba(face_encoding_reshaped)[0]
-                if any(p > 0.85 for p in probability):
-                    prob_string = ""
-                    for p in probability:
-                        if p > 0.85:
-                            p *= 100
-                            prob_string = str(p)[:4]
-                    prediction = clf.predict(face_encoding_reshaped)[0]
-                    person_text = "{} {}%".format(prediction, prob_string)
-                else:
-                    person_text = "Unknown"
-                face_names.append(person_text)
+            face_locations, face_names = process_the_frame(rgb_small_frame, clf)
         process_this_frame = not process_this_frame
         for (top, right, bottom, left), name in zip(face_locations, face_names):
-            top *= 2
-            right *= 2
-            bottom *= 2
-            left *= 2
-            cv2.rectangle(frame, (left, top), (right, bottom), (152, 0, 152), 3)
-            font = cv2.FONT_HERSHEY_DUPLEX
-            cv2.putText(img=frame, text=name, org=(left + 6, bottom - 6), fontFace=font, 
-                        color=(255, 255, 255), bottomLeftOrigin=False, fontScale=0.5)
+            # Rescale the coordinates to original frame size
+            frame = display_face_box(frame, top, right, bottom, left, name)
         cv2.imshow("Frame", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
