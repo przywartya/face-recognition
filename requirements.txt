@@ -27,7 +27,7 @@ MarkupSafe==1.0
 numpy==1.14.3
 oauth==1.0.1
 olefile==0.45.1
-opencv-python==3.4.1.15
+opencv-python==4.2.0.32
 pbr==3.1.1
 pexpect==4.2.1
 Pillow==5.1.0
